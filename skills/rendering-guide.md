@@ -212,6 +212,23 @@ ffmpeg -framerate 30 -i frames/frame_%04d.png \
 
 ---
 
+---
+
+## Mixing with AI-generated footage (H3 / any video model)
+
+Canvas is deterministic; AI video is not. When you want both, keep the division
+strict: **AI supplies atmosphere and motion, Canvas supplies identity and text.**
+
+- Use the AI clip as a background plate and key the Canvas frames over it with
+  ffmpeg `colorkey` on your paper color (see `hybrid-h3.md`, Pattern A).
+- Never ask a video model to render on-screen text - burn type in the Canvas pass.
+- Never ask a video model to hold a detailed character design across a shot if the
+  audience must recognise it; that is what this pipeline is for.
+- Match your Canvas camera easing to the plate motion so cuts do not feel dead.
+
+> Full workflow, three integration patterns, credit budget math, and a
+> "which engine is at fault" failure table: [`hybrid-h3.md`](./hybrid-h3.md)
+
 ## Resolution Reference
 
 | Aspect | Resolution | Use case |
