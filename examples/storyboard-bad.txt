@@ -1,0 +1,5 @@
+# 反例：故意写坏的分镜表，用来验证 lint 能抓到问题
+0   | 20 | h3     | empty courtyard                     |
+20  | 6  | canvas | face close-up of the character      |
+24  | 6  | canvas | hand enters, ink line               |
+32  | 4  | ai     | mist                                |
