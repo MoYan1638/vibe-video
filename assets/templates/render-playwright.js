@@ -78,6 +78,23 @@ async function main() {
   await page.goto('file:///' + html.replace(/\\/g, '/'));
   await page.waitForFunction(() => typeof window.seek === 'function', null, { timeout: 10000 });
 
+  // Hybrid mode: transparent frames so they can be overlaid on an AI plate
+  // without chroma-keying (keying eats anti-aliased edges and low-alpha grain).
+  const alpha = args.alpha === 'true' || args.alpha === '1';
+  if (alpha) {
+    // ?alpha=1 is the skill-wide convention: your animation.js checks
+    // location.search for it and skips painting the paper/background layer.
+    await page.goto('file:///' + html.replace(/\\/g, '/') + '?alpha=1');
+    await page.waitForFunction(() => typeof window.seek === 'function', null, { timeout: 10000 });
+    await page.evaluate(() => {
+      document.documentElement.style.background = 'transparent';
+      document.body.style.background = 'transparent';
+      const c = document.getElementById('c');
+      if (c) c.style.background = 'transparent';
+    });
+    console.log('Alpha mode: background layer skipped, frames will be RGBA.');
+  }
+
   const t0 = Date.now();
   for (let i = 0; i < total; i++) {
     const t = i / fps;
@@ -86,6 +103,7 @@ async function main() {
     await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => r())));
     await page.screenshot({
       path: path.join(outDir, `frame_${String(i).padStart(4, '0')}.png`),
+      omitBackground: alpha,
     });
     if (i % fps === 0) {
       const pct = ((i / total) * 100).toFixed(0);
