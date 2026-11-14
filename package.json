@@ -1,0 +1,43 @@
+{
+  "name": "vibe-video",
+  "version": "1.1.0",
+  "description": "Turn any idea into a short video with pure code: Canvas animation -> headless-browser frames -> ffmpeg MP4. No filming, no stock footage, no AI video models.",
+  "main": "skills/SKILL.md",
+  "files": [
+    "skills",
+    "assets",
+    "examples"
+  ],
+  "scripts": {
+    "still": "node assets/templates/still.js",
+    "render": "node assets/templates/render-playwright.js",
+    "composite": "bash assets/templates/composite.sh"
+  },
+  "keywords": [
+    "ai",
+    "agent",
+    "skill",
+    "claude",
+    "workbuddy",
+    "canvas",
+    "animation",
+    "short-video",
+    "vibe-video",
+    "ffmpeg",
+    "playwright",
+    "generative-art",
+    "frame-by-frame"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "peerDependencies": {
+    "playwright": ">=1.40.0"
+  },
+  "peerDependenciesMeta": {
+    "playwright": {
+      "optional": true
+    }
+  }
+}
