@@ -4,13 +4,18 @@
 #
 # Usage:
 #   bash composite.sh <frames_dir> [output.mp4] [fps] [bgm_file] [overlay_plate]
+#   bash composite.sh --overlay <plate.mp4> <frames_dir> [output.mp4] [fps]
 #
-# Hybrid mode (5th arg): Canvas frames are chroma-keyed over an AI-generated
-# atmosphere plate. Set KEY=e8e4dc to the Canvas layer background color.
+# Hybrid mode (5th arg, or the --overlay flag form): Canvas frames are placed
+# over an AI-generated atmosphere plate. If the frames were rendered with
+# `--alpha true` they already carry transparency and no key is applied.
+# Plain RGB frames get chroma-keyed instead; set KEY=e8e4dc to the paper color.
 #
 # Examples:
 #   bash composite.sh ./frames demo.mp4
 #   bash composite.sh ./frames demo.mp4 30 bgm.mp3
+#   bash composite.sh --overlay plate.mp4 ./frames demo.mp4 30
+#   KEY=e8e4dc bash composite.sh ./frames demo.mp4 30 "" plate.mp4
 #
 # Windows notes:
 #   - Run from Git Bash / WSL / MSYS2.
@@ -18,6 +23,13 @@
 #   - All paths are quoted, spaces are safe.
 
 set -euo pipefail
+
+# --overlay <plate> <frames_dir> [out] [fps]  ->  rewrite to positional form
+OVERLAY=""
+if [ "${1:-}" = "--overlay" ]; then
+  OVERLAY="$2"
+  set -- "$3" "${4:-output.mp4}" "${5:-30}"
+fi
 
 FRAMES_DIR="${1:-./frames}"
 OUTPUT="${2:-output.mp4}"
@@ -41,22 +53,35 @@ if ! command -v "$FFMPEG" >/dev/null 2>&1; then
   exit 1
 fi
 
-OVERLAY="${5:-}"
+OVERLAY="${5:-${OVERLAY:-}}"
 
 COMMON=(-framerate "$FPS" -i "$PATTERN" -c:v libx264 -pix_fmt yuv420p -crf 20 -movflags +faststart)
 
 if [ -n "$OVERLAY" ]; then
-  # Hybrid mode: AI-generated atmosphere plate + keyed Canvas frames.
-  # KEY is the paper color of the Canvas layer (hex, no #).
-  KEY="${KEY:-e8e4dc}"
+  # Hybrid mode: AI-generated atmosphere plate + Canvas frames on top.
   if [ ! -f "$OVERLAY" ]; then
     echo "Error: overlay plate not found: $OVERLAY"
     exit 1
   fi
-  echo "Compositing Canvas frames over plate ($OVERLAY), key=#$KEY -> $OUTPUT"
-  "$FFMPEG" -y -stream_loop -1 -i "$OVERLAY" "${COMMON[@]}" \
-    -filter_complex "[1:v]colorkey=0x${KEY}:0.10:0.04[fg];[0:v][fg]overlay=shortest=1" \
-    "$OUTPUT"
+  # Detect alpha: PNG color type 6 (RGBA) in the first frame's IHDR.
+  HAS_ALPHA=0
+  if command -v od >/dev/null 2>&1; then
+    COLOR_TYPE=$(od -An -tu1 -j 25 -N 1 "$(printf "$PATTERN" 0)" 2>/dev/null | tr -d ' \n')
+    [ "$COLOR_TYPE" = "6" ] && HAS_ALPHA=1
+  fi
+  if [ "$HAS_ALPHA" = "1" ]; then
+    echo "Compositing transparent Canvas frames over plate ($OVERLAY) -> $OUTPUT"
+    "$FFMPEG" -y -stream_loop -1 -i "$OVERLAY" "${COMMON[@]}" \
+      -filter_complex "[0:v][1:v]overlay=shortest=1:format=auto" \
+      "$OUTPUT"
+  else
+    KEY="${KEY:-e8e4dc}"
+    echo "Compositing keyed Canvas frames over plate ($OVERLAY), key=#$KEY -> $OUTPUT"
+    echo "  (tip: render with --alpha true to skip keying entirely)"
+    "$FFMPEG" -y -stream_loop -1 -i "$OVERLAY" "${COMMON[@]}" \
+      -filter_complex "[1:v]colorkey=0x${KEY}:0.10:0.04[fg];[0:v][fg]overlay=shortest=1" \
+      "$OUTPUT"
+  fi
   SIZE=$(du -h "$OUTPUT" | cut -f1)
   echo "Done: $OUTPUT ($SIZE)"
   exit 0
