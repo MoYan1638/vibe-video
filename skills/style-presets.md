@@ -166,3 +166,36 @@ Users can define their own style by providing:
 3. **Reference image or mood board**
 
 The AI will infer the rendering approach from these parameters.
+
+---
+
+## 7. risograph-ink (双色丝网 / Riso 印刷)
+
+**Mood**: Hand-printed, tactile, off-register, editorial, zine-like
+
+| Property | Value |
+|----------|-------|
+| Primary | Paper cream `#e8e4dc` + near-black ink `#141312` |
+| Accent | ONE spot color (`#7a2430` deep red / `#1d3a52` navy) — under 20% of pixel area |
+| Dark | Ink, never gray gradients |
+| Texture | 1.5–3px misregistration offset + halftone dots + seeded paper grain + wobbling edges |
+| Best for | Narrative shorts, emotional monologue, handmade brand feel, game fan-art posters |
+
+**Canvas tips**:
+```javascript
+// The single highest-value trick: draw twice, offset the second pass.
+ctx.fillStyle = INK;
+drawFigure(ctx, pose);                    // flat ink, no gradient
+ctx.globalAlpha = 0.4;
+ctx.translate(-2, 1.5);                    // misregistration
+ctx.strokeStyle = ACCENT; ctx.lineWidth = 2.2;
+drawFigureOutline(ctx, pose);
+ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+// Paper grain, always the last pass, seeded PRNG only
+ctx.globalAlpha = 0.05;
+for (let i = 0; i < 8000; i++) ctx.fillRect(rng() * W, rng() * H, 1.4, 1.4);
+```
+
+> Full preset with composition rules, motion safety table, and failure modes:
+> [`style-presets/risograph-ink.md`](./style-presets/risograph-ink.md)
