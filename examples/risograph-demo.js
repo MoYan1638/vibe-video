@@ -200,12 +200,16 @@ function render(st) {
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.clearRect(0, 0, W, H);
 
+  // Hybrid mode: --alpha true passes ?alpha=1, so the paper layer is skipped and
+  // the frames come out with a transparent background ready for overlay.
+  const ALPHA = /(?:\?|&)alpha=1/.test(location.search);
+
   // camera push
   ctx.translate(W / 2, H / 2);
   ctx.scale(st.zoom, st.zoom);
   ctx.translate(-W / 2, -H / 2);
 
-  ctx.drawImage(plate, 0, 0);
+  if (!ALPHA) ctx.drawImage(plate, 0, 0);
   ctx.globalAlpha = st.intro;
   drawFigure(st.s, st.breathe, st.tilt);
   ctx.globalAlpha = 1;
