@@ -3,7 +3,10 @@
 # vibe-video — ffmpeg composite script
 #
 # Usage:
-#   bash composite.sh <frames_dir> [output.mp4] [fps] [bgm_file]
+#   bash composite.sh <frames_dir> [output.mp4] [fps] [bgm_file] [overlay_plate]
+#
+# Hybrid mode (5th arg): Canvas frames are chroma-keyed over an AI-generated
+# atmosphere plate. Set KEY=e8e4dc to the Canvas layer background color.
 #
 # Examples:
 #   bash composite.sh ./frames demo.mp4
@@ -38,7 +41,26 @@ if ! command -v "$FFMPEG" >/dev/null 2>&1; then
   exit 1
 fi
 
+OVERLAY="${5:-}"
+
 COMMON=(-framerate "$FPS" -i "$PATTERN" -c:v libx264 -pix_fmt yuv420p -crf 20 -movflags +faststart)
+
+if [ -n "$OVERLAY" ]; then
+  # Hybrid mode: AI-generated atmosphere plate + keyed Canvas frames.
+  # KEY is the paper color of the Canvas layer (hex, no #).
+  KEY="${KEY:-e8e4dc}"
+  if [ ! -f "$OVERLAY" ]; then
+    echo "Error: overlay plate not found: $OVERLAY"
+    exit 1
+  fi
+  echo "Compositing Canvas frames over plate ($OVERLAY), key=#$KEY -> $OUTPUT"
+  "$FFMPEG" -y -stream_loop -1 -i "$OVERLAY" "${COMMON[@]}" \
+    -filter_complex "[1:v]colorkey=0x${KEY}:0.10:0.04[fg];[0:v][fg]overlay=shortest=1" \
+    "$OUTPUT"
+  SIZE=$(du -h "$OUTPUT" | cut -f1)
+  echo "Done: $OUTPUT ($SIZE)"
+  exit 0
+fi
 
 if [ -z "$BGM" ]; then
   echo "Compositing video only -> $OUTPUT"
