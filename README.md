@@ -3,8 +3,8 @@
 > **AI-Powered Short Video Generator** — Turn any idea into a beautiful short video using pure code. No filming, no stock footage, no voiceover required.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Skills](https://img.shields.io/badge/Skills-6-blue)](./skills)
-[![Styles](https://img.shields.io/badge/Styles-6-green)](./skills/style-presets.md)
+[![Skills](https://img.shields.io/badge/Skills-8-blue)](./skills)
+[![Styles](https://img.shields.io/badge/Styles-7-green)](./skills/style-presets.md)
 
 ---
 
@@ -44,6 +44,7 @@ All without cameras, actors, stock footage, or manual video editing.
 | **pixel-retro** | Nostalgic, playful, lo-fi | Gaming, memes, retro |
 | **tech-blueprint** | Precise, analytical, scientific | Science explainers, tutorials |
 | **hand-drawn** | Childlike, warm, storybook | Children's content, brands |
+| **risograph-ink** | Printed, grainy, limited-ink | Editorial, moody narrative, poster-like |
 
 ---
 
@@ -79,7 +80,9 @@ vibe-video/
 ├── LICENSE                   # MIT License
 ├── skills/
 │   ├── SKILL.md             # Main skill definition & workflow
-│   ├── style-presets.md     # 6 visual style presets
+│   ├── storyboard-to-h3.md  # Pre-flight: storyboard lint + H3 prompt blocks
+│   ├── hybrid-h3.md         # Mixing Canvas layers with AI-generated atmosphere plates
+│   ├── style-presets.md     # 6 visual style presets (+ risograph-ink in style-presets/)
 │   ├── rendering-guide.md   # Canvas/JS → ffmpeg pipeline + determinism rules + troubleshooting
 │   ├── metaphor-library.md  # Abstract concept → visual mappings
 │   ├── caption-guide.md     # Typography, timing, tone rules
@@ -87,13 +90,16 @@ vibe-video/
 ├── examples/
 │   ├── knowledge-onion.md   # Example: why onions make you cry
 │   ├── emotion-possessive.md # Example: possessiveness metaphor
-│   └── product-focus-app.md  # Example: focus app promo
+│   ├── product-focus-app.md  # Example: focus app promo
+│   ├── risograph-demo.js/.html  # Runnable risograph-ink demo
+│   └── storyboard-sample.txt    # Lint-clean 56s hybrid storyboard
 ├── assets/
 │   └── templates/
 │       ├── animation.js / animation.html  # Ready-to-edit scaffold (layers, captions, seeded PRNG, live preview)
-│       ├── render-playwright.js           # Frame renderer (browser autodetect, paint-synced)
+│       ├── render-playwright.js           # Frame renderer (browser autodetect, paint-synced, --alpha true)
 │       ├── still.js                       # Single-frame still renderer for look-checks
-│       ├── composite.sh                   # ffmpeg compositing script
+│       ├── lint-storyboard.js             # Storyboard linter (timeline, H3 window, credits)
+│       ├── composite.sh                   # ffmpeg compositing script (video / BGM / --overlay)
 │       └── render-template.js             # Node-canvas variant (no browser)
 └── docs/
     └── CONTRIBUTING.md      # How to contribute new styles/metaphors
@@ -150,6 +156,9 @@ npm install playwright-core   # or playwright / @playwright/test
 # 0. copy the scaffold and edit STORYBOARD + draw*() to your storyboard
 cp assets/templates/animation.js assets/templates/animation.html myvideo/
 
+# 0.5 lint the storyboard before writing code (free, catches timeline + engine mistakes)
+node assets/templates/lint-storyboard.js examples/storyboard-sample.txt
+
 # 1. LOOK-CHECK with stills first (~1s each) — never discover a broken look after a 3-minute render
 node assets/templates/still.js --html myvideo/animation.html --times 0,4,10
 
@@ -161,6 +170,25 @@ bash assets/templates/composite.sh ./frames output.mp4 30
 ```
 
 Key contract: your animation exposes `window.seek(t)` and derives **all** state from `t` (use the seeded PRNG in the scaffold, never `Math.random()`). That makes stills, re-renders, and interrupted-batch resumes all byte-reproducible. See `skills/rendering-guide.md` → Determinism Rules & Troubleshooting.
+
+---
+
+## 🧩 Hybrid with AI video (optional)
+
+Code keeps identity and text exact; AI video supplies light, weather and camera feel. The skill ships a contract for both directions:
+
+- **`skills/storyboard-to-h3.md`** — pre-flight translation: split the timeline into 4–15s AI shots, emit a six-section prompt block per shot, then copy the prompt's camera numbers back into the animation. Plus the storyboard lint table.
+- **`skills/hybrid-h3.md`** — three integration patterns (atmosphere plate / style anchor / motion reference), credit budget math, and a "which engine is at fault" table.
+- **`assets/templates/lint-storyboard.js`** — run before you generate anything: checks timeline gaps, the 4–15s AI window, engine assignment, and estimates credits.
+
+```bash
+node assets/templates/lint-storyboard.js examples/storyboard-sample.txt
+# render the Canvas layer with transparency, then overlay it on the AI plate
+node assets/templates/render-playwright.js --html animation.html --out ./frames --duration 56 --alpha true
+bash assets/templates/composite.sh --overlay plate.mp4 ./frames output.mp4 30
+```
+
+Rule of thumb: never let an AI video model draw a character the audience must recognise, and never let it draw text.
 
 ---
 
