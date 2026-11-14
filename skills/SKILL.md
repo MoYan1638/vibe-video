@@ -78,6 +78,19 @@ function seek(t) {
 // Playwright headless → screenshot each frame → ffmpeg composite
 ```
 
+### Step 3.5: Storyboard → H3 prompt (pre-flight)
+
+Insert this between the confirmed storyboard and the first line of rendering code. Storyboards are written for humans; H3 needs a different grammar. Translating up front is what prevents the one unfixable mistake in this pipeline — an AI shot that redraws a character you needed on-model.
+
+```bash
+# lint first: timeline gaps, H3 window (4–15s), engine assignment, credit estimate
+node assets/templates/lint-storyboard.js examples/storyboard-sample.txt
+```
+
+Then, per H3 shot, emit a six-section prompt block and copy its camera numbers and cut marks back into the animation code, so the two layers move together.
+
+Full procedure, field rules, checklist and the lint table: [`storyboard-to-h3.md`](./storyboard-to-h3.md).
+
 ### Step 4: Render & Composite
 
 **Preview stills first** — checking one frame takes ~1s, a full render takes minutes:
@@ -94,6 +107,10 @@ bash assets/templates/composite.sh ./frames output.mp4 30
 
 # with BGM
 bash assets/templates/composite.sh ./frames output.mp4 30 bgm.mp3
+
+# hybrid: Canvas layer over an AI atmosphere plate (transparent frames, no keying)
+node assets/templates/render-playwright.js --html animation.html --out ./frames --fps 30 --duration 56 --alpha true
+bash assets/templates/composite.sh --overlay plate.mp4 ./frames output.mp4 30
 ```
 
 Windows gotcha: if `bash composite.sh` misbehaves (Git Bash shim / stripped PATH), spawn ffmpeg from Node with `child_process.spawn` directly — see rendering-guide.md Troubleshooting.
@@ -125,6 +142,8 @@ Deliver: MP4 file + storyboard + source code. File size target: <50MB for 30s.
 | `metaphor-library.md` | Visual metaphor mappings for abstract concepts |
 | `caption-guide.md` | Caption typography, timing, and tone rules |
 | `bgm-guide.md` | BGM selection guide by video type |
+| `storyboard-to-h3.md` | **Pre-flight**: storyboard lint + H3 six-section prompt blocks before you write code |
+| `../assets/templates/lint-storyboard.js` | Storyboard linter: timeline gaps, H3 4–15s window, engine assignment, credit estimate |
 | `../assets/templates/animation.js` + `animation.html` | **Ready-to-edit scaffold** (layers, captions, seeded background, live preview) |
 | `../assets/templates/render-playwright.js` | Frame renderer: browser autodetect (Edge/Chrome/chromium), paint-synced screenshots |
 | `../assets/templates/still.js` | Single-frame still renderer for cheap look-checks |
